@@ -1,5 +1,7 @@
 
+
 # SatAmPlex
+![Python](https://img.shields.io/badge/python-3.10+-blue)
 
 SatAmPlex is a command-line tool that creates a nostalgic "Saturday Morning Cartoons" playlist using your Plex library. It randomly selects a mix of cartoon and live-action episodes, adhering to time limits and configurable rules.
 
