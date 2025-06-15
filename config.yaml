@@ -1,0 +1,18 @@
+# Plex configuration for Saturday Morning playlist
+plex:
+  url: "http://192.168.4.24:32400"
+  token: ""
+  tv_library: "TV Shows"
+
+playlist:
+  name: "📺 Saturday Morning"
+  max_duration: 180
+  max_episode_length: 55
+  min_episode_length: 10
+  include_live_action: true
+  exclude_titles: []
+  shuffle_order: true
+  log_output: "~/Documents/saturday_log.txt"
+  collections:
+    cartoons: "Saturday Morning Cartoons"
+    live_action: "Saturday Morning Live Action"
