@@ -1,8 +1,11 @@
 import argparse
-from saturday_morning import main, authenticate_and_save_token, token_path
 import os
+import sys
+from .core import main, authenticate_and_save_token, token_path
 
 def cli_entry():
+    print("🚀 CLI entry reached")
+    print("🧪 sys.argv:", sys.argv)
     parser = argparse.ArgumentParser(description="Generate a Saturday Morning playlist.")
     parser.add_argument('--dry-run', action='store_true', help="Print selected episodes without creating playlist")
     parser.add_argument('--auth', action='store_true', help="Login to Plex and store token")
@@ -14,6 +17,7 @@ def cli_entry():
     parser.add_argument('--no-shuffle', action='store_true')
 
     args = parser.parse_args()
+    print("🔍 Parsed args:", args)
 
     if args.logout:
         if os.path.exists(token_path):
@@ -24,9 +28,11 @@ def cli_entry():
         return
 
     if args.auth:
+        print("🧪 AUTH block triggered")
         authenticate_and_save_token()
         return
 
+    print("📺 Starting playlist generation")
     main(
         dry_run=args.dry_run,
         max_duration=args.max_duration,
@@ -35,3 +41,6 @@ def cli_entry():
         no_live=args.no_live,
         no_shuffle=args.no_shuffle,
     )
+
+if __name__ == "__main__":
+    cli_entry()

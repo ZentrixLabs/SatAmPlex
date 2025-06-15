@@ -17,8 +17,11 @@ dependencies = [
 ]
 
 [project.scripts]
-saturday-cartoons = "saturday_morning.__main__:cli_entry"
+saturday-morning = "saturday_morning.__main__:cli_entry"
 
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["saturday_morning"]

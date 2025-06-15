@@ -23,13 +23,17 @@ dirs = PlatformDirs("SaturdayAmPlex", "ZentrixLabs")
 token_path = os.path.join(dirs.user_config_path, "token.json")
 
 PLEX_URL = config['plex']['url']
-PLEX_TOKEN = config['plex'].get('token')
-if not PLEX_TOKEN and os.path.exists(token_path):
-    with open(token_path, 'r') as f:
-        PLEX_TOKEN = json.load(f).get("token")
-if not PLEX_TOKEN:
-    print("❌ No Plex token found. Please run with --auth to log in.")
-    exit(1)
+
+def load_plex_token_or_exit():
+    token = config['plex'].get('token')
+    if not token and os.path.exists(token_path):
+        with open(token_path, 'r') as f:
+            token = json.load(f).get("token")
+    if not token:
+        print("❌ No Plex token found. Please run with --auth to log in.")
+        exit(1)
+    return token
+
 TV_LIBRARY = config['plex']['tv_library']
 
 COLLECTIONS = [
@@ -68,12 +72,21 @@ def authenticate_and_save_token():
         "X-Plex-Client-Identifier": client_id,
         "X-Plex-Product": "SaturdayAmPlex",
         "X-Plex-Version": "1.0",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
     }
 
     print("🔐 Requesting device code from Plex...")
     res = requests.post("https://plex.tv/api/v2/pins", headers=headers)
-    res.raise_for_status()
-    data = res.json()
+    try:
+        res.raise_for_status()
+        data = res.json()
+    except Exception as e:
+        print("❌ Failed to parse Plex response:")
+        print(f"Status Code: {res.status_code}")
+        print(f"Response Text: {res.text}")
+        raise
+    # data = res.json()
     pin_id = data["id"]
     code = data["code"]
 
@@ -102,6 +115,7 @@ def authenticate_and_save_token():
     return None
 
 def main(dry_run=False, max_duration=None, min_length=None, max_length=None, no_live=False, no_shuffle=False):
+    PLEX_TOKEN = load_plex_token_or_exit()
     max_duration = max_duration or MAX_DURATION_MINUTES
     min_length = min_length or MIN_EPISODE_LENGTH_MINUTES
     max_length = max_length or MAX_EPISODE_LENGTH_MINUTES
