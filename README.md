@@ -16,7 +16,7 @@ SatAmPlex is a command-line tool that creates a nostalgic "Saturday Morning Cart
 ## Installation
 
 ```bash
-pip install -e .
+pip3 install -e .
 ```
 
 This installs the CLI command:
