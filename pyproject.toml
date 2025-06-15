@@ -1,0 +1,24 @@
+[project]
+name = "saturdayamplex"
+version = "0.1.0"
+description = "Generate nostalgic cartoon playlists from Plex"
+authors = [
+  { name="Mike Becker", email="mike@zentrixlabs.net" }
+]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.8"
+
+dependencies = [
+  "plexapi>=4.12.0",
+  "PyYAML>=6.0",
+  "platformdirs>=4.0.0",
+  "requests>=2.31.0"
+]
+
+[project.scripts]
+saturday-cartoons = "saturday_morning.__main__:cli_entry"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

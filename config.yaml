@@ -1,7 +1,7 @@
 # Plex configuration for Saturday Morning playlist
+# Token is managed automatically via 'saturday-morning --auth'
 plex:
   url: "http://192.168.4.24:32400"
-  token: ""
   tv_library: "TV Shows"
 
 playlist:
