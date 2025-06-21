@@ -22,6 +22,19 @@ except Exception as e:
 dirs = PlatformDirs("SaturdayAmPlex", "ZentrixLabs")
 token_path = os.path.join(dirs.user_config_path, "token.json")
 
+continuity_path = os.path.join(dirs.user_config_path, "continuity.json")
+
+def load_continuity():
+    if os.path.exists(continuity_path):
+        with open(continuity_path, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_continuity(data):
+    os.makedirs(os.path.dirname(continuity_path), exist_ok=True)
+    with open(continuity_path, 'w') as f:
+        json.dump(data, f, indent=2)
+
 PLEX_URL = config['plex']['url']
 
 def load_plex_token_or_exit():
@@ -114,6 +127,15 @@ def authenticate_and_save_token():
     print("❌ Login timed out.")
     return None
 
+def parse_multipart_title(title):
+    # Look for something like: Title: Subtitle (1)
+    match = re.search(r"^(.*?)(?:[:\-]\s*.*?)?\s*\((\d+)\)", title)
+    if match:
+        base = match.group(1).strip()
+        part = int(match.group(2))
+        return base, part
+    return None, None
+
 def main(dry_run=False, max_duration=None, min_length=None, max_length=None, no_live=False, no_shuffle=False):
     PLEX_TOKEN = load_plex_token_or_exit()
     max_duration = max_duration or MAX_DURATION_MINUTES
@@ -136,6 +158,28 @@ def main(dry_run=False, max_duration=None, min_length=None, max_length=None, no_
 
     playlist_items = []
     total_duration = 0.0
+
+    continuity = load_continuity()
+
+    # Try to continue any multipart arc in progress
+    continuing_ep = None
+    for show in cartoon_shows:
+        try:
+            episodes = show.episodes()
+            for ep in episodes:
+                base, part = parse_multipart_title(ep.title)
+                if base and show.title in continuity and base in continuity[show.title] and continuity[show.title][base]["next_part"] == part:
+                    ep_duration = ep.duration / 60000.0
+                    if min_length <= ep_duration <= max_length and total_duration + ep_duration <= max_duration:
+                        continuing_ep = ep
+                        total_duration += ep_duration
+                        logging.info(f"Continuing multipart: {show.title} - {ep.title} ({ep_duration:.1f} min)")
+                        break
+            if continuing_ep:
+                playlist_items.append(continuing_ep)
+                break
+        except Exception as e:
+            logging.error(f"Error checking continuity for show '{show.title}': {e}")
 
     # Select 1 random live-action episode first (≤ 55 min)
     selected_live_action_episode = None
@@ -179,18 +223,31 @@ def main(dry_run=False, max_duration=None, min_length=None, max_length=None, no_
                     cartoon_items.append(episode)
                     total_duration += episode_duration
                     logging.info(f"Added cartoon: {show.title} - {episode.title} ({episode_duration:.1f} min)")
+                    base, part = parse_multipart_title(episode.title)
+                    if base and part:
+                        if show.title not in continuity:
+                            continuity[show.title] = {}
+                        continuity[show.title][base] = {
+                            "next_part": part + 1,
+                            "total_parts": continuity[show.title].get(base, {}).get("total_parts", part + 1)
+                        }
+                        # Cleanup: remove completed arcs from continuity
+                        if continuity[show.title][base]["next_part"] > continuity[show.title][base]["total_parts"]:
+                            del continuity[show.title][base]
+                            if not continuity[show.title]:
+                                del continuity[show.title]
                     break
         except Exception as e:
             logging.error(f"Error processing cartoon show '{show.title}': {e}")
 
     # Ensure at least two cartoons are placed first
     if len(cartoon_items) >= 2:
-        playlist_items = cartoon_items[:2]
+        playlist_items.extend(cartoon_items[:2])
         if selected_live_action_episode:
             playlist_items.append(selected_live_action_episode)
         playlist_items.extend(cartoon_items[2:])
     else:
-        playlist_items = cartoon_items  # fallback if not enough cartoons
+        playlist_items.extend(cartoon_items)  # fallback if not enough cartoons
         if selected_live_action_episode:
             playlist_items.append(selected_live_action_episode)
 
@@ -219,6 +276,8 @@ def main(dry_run=False, max_duration=None, min_length=None, max_length=None, no_
     plex.createPlaylist(PLAYLIST_NAME, items=playlist_items)
     logging.info(f"Created playlist '{PLAYLIST_NAME}' with {len(playlist_items)} episodes, total duration {total_duration:.1f} min")
 
+    save_continuity(continuity)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Generate a Saturday Morning playlist.")
     parser.add_argument('--dry-run', action='store_true', help="Print selected episodes without creating playlist")
@@ -229,6 +288,8 @@ if __name__ == '__main__':
     parser.add_argument('--max-length', type=int, help="Override maximum episode length in minutes")
     parser.add_argument('--no-live', action='store_true', help="Exclude live action segment")
     parser.add_argument('--no-shuffle', action='store_true', help="Disable shuffling of playlist order")
+    parser.add_argument('--reset-continuity', action='store_true', help="Clear continuity tracking data")
+    parser.add_argument('--show-continuity', action='store_true', help="Print current continuity tracking data")
     args = parser.parse_args()
     if args.logout:
         if os.path.exists(token_path):
@@ -236,6 +297,21 @@ if __name__ == '__main__':
             print("🚪 Logged out: saved token removed.")
         else:
             print("ℹ️ No saved token to delete.")
+        exit()
+    if args.reset_continuity:
+        save_continuity({})
+        print("🧹 Continuity data reset.")
+        exit()
+    if args.show_continuity:
+        continuity = load_continuity()
+        if not continuity:
+            print("📭 No continuity data found.")
+        else:
+            print("📺 Current continuity tracking:")
+            for series, arcs in continuity.items():
+                print(f"{series}:")
+                for arc, data in arcs.items():
+                    print(f"  - {arc}: Next Part {data['next_part']} of {data['total_parts']}")
         exit()
     if args.auth:
         authenticate_and_save_token()

@@ -1,6 +1,4 @@
-
-
-# SatAmPlex
+<file name=0 path=/Users/mbecker/Documents/GitHub/SatAmPlex/README.md># SatAmPlex
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
 
 SatAmPlex is a command-line tool that creates a nostalgic "Saturday Morning Cartoons" playlist using your Plex library. It randomly selects a mix of cartoon and live-action episodes, adhering to time limits and configurable rules.
@@ -11,6 +9,7 @@ SatAmPlex is a command-line tool that creates a nostalgic "Saturday Morning Cart
 - Runtime-limited playlist (default: 180 minutes)
 - Customizable collections and length constraints
 - Supports exclusions and shuffle settings
+- Remembers multipart episode arcs and continues them across runs
 - Plex login via Device Auth (no token copy/paste)
 - Cross-platform log and config storage
 - Easily installable as a CLI tool
@@ -54,6 +53,8 @@ saturday-morning --dry-run
 - `--max-length 55`: Maximum episode length
 - `--no-live`: Exclude live-action entry
 - `--no-shuffle`: Keep selected order
+- `--show-continuity`: Show currently tracked multipart episodes
+- `--reset-continuity`: Clear saved multipart episode state
 
 ## Config File (`config.yaml`)
 
@@ -77,6 +78,32 @@ playlist:
   shuffle_order: true
 ```
 
+## Continuity Tracking File (`continuity.json`)
+
+This optional file is automatically created and updated to track multipart episodes across runs. It ensures that if a multi-part arc starts (like `"The Ultimate Doom (1)"`), the next part will be scheduled in a future playlist. The tracking is grouped by series title to avoid cross-show conflicts.
+
+### Example
+
+```json
+{
+  "Transformers": {
+    "The Ultimate Doom": {
+      "next_part": 2,
+      "total_parts": 3
+    }
+  },
+  "G.I. Joe": {
+    "The M.A.S.S. Device": {
+      "next_part": 4,
+      "total_parts": 5
+    }
+  }
+}
+```
+
+The script will prioritize `"next_part"` the next time it runs. When the final part of an arc is played, that arc is automatically removed from the file.
+
 ## License
 
 MIT — © 2025 Mike Becker / ZentrixLabs
+</file>
