@@ -262,8 +262,6 @@ def main(dry_run=False, max_duration=None, min_length=None, max_length=None, no_
         logging.warning("No episodes selected. Playlist not created.")
         return
 
-    if shuffle_order:
-        random.shuffle(playlist_items)
 
     def is_live_action(ep):
         return ep.librarySectionTitle.lower() == config['playlist']['collections']['live_action'].lower()
