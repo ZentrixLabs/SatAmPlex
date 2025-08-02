@@ -206,9 +206,12 @@ def main(dry_run=False, max_duration=None, min_length=None, max_length=None, no_
 
     cartoon_items = []
     random.shuffle(cartoon_shows)
+    added_series = set()
     for show in cartoon_shows:
         if show.title.lower() in EXCLUDE_TITLES:
             logging.info(f"Skipped excluded show: {show.title}")
+            continue
+        if show.title in added_series:
             continue
         try:
             episodes = show.episodes()
@@ -218,12 +221,16 @@ def main(dry_run=False, max_duration=None, min_length=None, max_length=None, no_
                 continue
             random.shuffle(valid_episodes)
             for episode in valid_episodes:
+                base, part = parse_multipart_title(episode.title)
+                if part and part > 1:
+                    if show.title not in continuity or base not in continuity[show.title] or continuity[show.title][base]["next_part"] != part:
+                        continue  # Skip if it's part 2+ and not the expected one
                 episode_duration = episode.duration / 60000.0
                 if total_duration + episode_duration <= max_duration:
                     cartoon_items.append(episode)
                     total_duration += episode_duration
                     logging.info(f"Added cartoon: {show.title} - {episode.title} ({episode_duration:.1f} min)")
-                    base, part = parse_multipart_title(episode.title)
+                    added_series.add(show.title)
                     if base and part:
                         if show.title not in continuity:
                             continuity[show.title] = {}
@@ -257,6 +264,15 @@ def main(dry_run=False, max_duration=None, min_length=None, max_length=None, no_
 
     if shuffle_order:
         random.shuffle(playlist_items)
+
+    def is_live_action(ep):
+        return ep.librarySectionTitle.lower() == config['playlist']['collections']['live_action'].lower()
+
+    if playlist_items and is_live_action(playlist_items[0]):
+        for i in range(1, len(playlist_items)):
+            if not is_live_action(playlist_items[i]):
+                playlist_items[0], playlist_items[i] = playlist_items[i], playlist_items[0]
+                break
 
     if dry_run:
         print(f"DRY RUN: Would create playlist '{PLAYLIST_NAME}' with:")
